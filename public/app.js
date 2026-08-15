@@ -2267,6 +2267,11 @@ window.clearGharJaggaFilters = function () {
 window.handleCitUpload = function (type, input) {
   if (input.files && input.files[0]) {
     const file = input.files[0];
+    if (file.size > 15 * 1024 * 1024) {
+      showToast('Document image size exceeds 15MB limit.', 'error');
+      input.value = '';
+      return;
+    }
     if (type === 'front') State.applyFormData.citFrontFile = file;
     if (type === 'back') State.applyFormData.citBackFile = file;
 
@@ -2798,6 +2803,24 @@ window.publishListing = async function () {
 
   if (!title || (!price && isRoomOrJob)) {
     showToast('Please specify all required fields (Title and Price/Salary)', 'error');
+    return;
+  }
+
+  // File size checks (prevent gateway/proxy timeout issues)
+  if (coverFile && coverFile.size > 15 * 1024 * 1024) {
+    showToast('Cover photo size exceeds 15MB limit.', 'error');
+    return;
+  }
+  if (galleryFiles) {
+    for (let i = 0; i < galleryFiles.length; i++) {
+      if (galleryFiles[i].size > 15 * 1024 * 1024) {
+        showToast(`Gallery photo "${galleryFiles[i].name}" exceeds 15MB limit.`, 'error');
+        return;
+      }
+    }
+  }
+  if (videoFile && videoFile.size > 100 * 1024 * 1024) {
+    showToast('Video file exceeds 100MB proxy upload limit. Please compress the video or upload a smaller file.', 'error');
     return;
   }
 
