@@ -804,12 +804,21 @@ const upload = multer({
 // Takes a raw video buffer, transcodes to 2 HLS renditions (360p/720p),
 // uploads all .m3u8 and .ts segments to R2, returns the master playlist URL.
 // =============================================================================
-function hasAudioStream(filePath) {
+function getVideoMetadata(filePath) {
   return new Promise((resolve) => {
     exec(`"${ffmpegPath}" -i "${filePath}"`, (err, stdout, stderr) => {
       const output = stderr || stdout || '';
       const hasAudio = output.includes('Audio:');
-      resolve(hasAudio);
+      
+      let width = 0;
+      let height = 0;
+      const resMatch = output.match(/\b(\d{3,5})x(\d{3,5})\b/);
+      if (resMatch) {
+        width = parseInt(resMatch[1], 10);
+        height = parseInt(resMatch[2], 10);
+      }
+      
+      resolve({ hasAudio, width, height });
     });
   });
 }
@@ -823,7 +832,15 @@ async function videoToHls(videoBuffer, originalName) {
   await fsp.mkdir(tmpDir, { recursive: true });
   await fsp.writeFile(inputPath, videoBuffer);
 
-  const hasAudio = await hasAudioStream(inputPath);
+  const metadata = await getVideoMetadata(inputPath);
+  console.log(`[HLS] Video metadata for ${originalName}:`, metadata);
+
+  if (metadata.width > 1920 || metadata.height > 1080) {
+    console.log(`[HLS] Video resolution ${metadata.width}x${metadata.height} exceeds 1080p limit. Skipping HLS transcode, falling back to direct upload.`);
+    throw new Error('Video resolution exceeds 1080p limit.');
+  }
+
+  const hasAudio = metadata.hasAudio;
   console.log(`[HLS] Starting transcode job ${jobId} for ${originalName} (Audio: ${hasAudio})`);
 
   await new Promise((resolve, reject) => {
