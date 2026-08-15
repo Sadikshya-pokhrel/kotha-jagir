@@ -284,4 +284,9 @@ window.API = {
   async getAdminGharJaggaInquiries() {
     return await apiFetch('/api/admin/ghar-jagga/inquiries');
   },
+  async deleteGharJaggaInquiry(id) {
+    return await apiFetch(`/api/admin/ghar-jagga/inquiries/${id}`, {
+      method: 'DELETE'
+    });
+  },
 };

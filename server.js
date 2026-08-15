@@ -1167,7 +1167,10 @@ app.post('/api/applications', upload.fields([
   { name: 'citizenship_front', maxCount: 1 },
   { name: 'citizenship_back', maxCount: 1 }
 ]), async (req, res) => {
-  const { listing_id, full_name, phone, email, occupation, id_type, preferred_date, message, password } = req.body;
+  const { listing_id, full_name, phone, email, occupation, id_type, preferred_date, message, password, permanent_address } = req.body;
+  if (!permanent_address) {
+    return res.status(400).json({ error: 'Permanent address is required' });
+  }
   try {
     // Validate target listing first
     const listingRes = await pool.query('SELECT title, type, status FROM listings WHERE id = $1', [listing_id]);
@@ -1242,8 +1245,8 @@ app.post('/api/applications', upload.fields([
       INSERT INTO applications (
         id, listing_id, full_name, phone, email, occupation, id_type, 
         citizenship_front_url, citizenship_back_url, preferred_date, message, 
-        password_hash, status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        password_hash, status, permanent_address
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
       RETURNING id, status
     `, [
       verificationId,
@@ -1258,7 +1261,8 @@ app.post('/api/applications', upload.fields([
       preferred_date || null,
       message,
       passwordHash,
-      'pending_payment'
+      'pending_payment',
+      permanent_address
     ]);
 
     // Create Notification alert
@@ -1343,6 +1347,7 @@ app.get('/api/member/applications', authenticateMember, async (req, res) => {
         phone: row.phone,
         email: row.email,
         occupation: row.occupation,
+        permanentAddress: row.permanent_address,
         id_type: row.id_type,
         listingId: row.listing_id,
         listingTitle: row.listing_title || 'Archived Listing',
@@ -1542,6 +1547,7 @@ app.get('/api/admin/applications', authenticateAdmin, async (req, res) => {
         phone: row.phone,
         email: row.email,
         occupation: row.occupation,
+        permanentAddress: row.permanent_address,
         id_type: row.id_type,
         listingTitle: row.listing_title || 'Archived Listing',
         type: row.listing_type === 'room' ? 'Room' : 'Job',
@@ -1666,6 +1672,7 @@ app.get('/api/admin/applications/:id/pdf', authenticateAdmin, async (req, res) =
     doc.text(`Email Address: ${row.email}`);
     doc.text(`Phone Number: ${row.phone}`);
     doc.text(`Occupation: ${row.occupation}`);
+    doc.text(`Permanent Address: ${row.permanent_address || 'N/A'}`);
     doc.text(`ID Reference: ${row.id_type}`);
     doc.text(`Listing Applied: ${row.listing_title || 'N/A'}`);
     doc.text(`Verification Status: ${row.status}`);
@@ -2197,6 +2204,10 @@ async function seedDatabaseIfEmpty() {
       ON CONFLICT (key) DO NOTHING
     `);
     console.log('Database operational settings validated.');
+
+    // Ensure applications table has permanent_address column (V3 Migration)
+    await pool.query('ALTER TABLE applications ADD COLUMN IF NOT EXISTS permanent_address TEXT');
+    console.log('Database schema migration checked: permanent_address column verified.');
   } catch (err) {
     console.error('Seeding checks failed:', err.message);
   }
@@ -2251,6 +2262,16 @@ app.get('/api/admin/ghar-jagga/inquiries', authenticateAdmin, async (req, res) =
        ORDER BY q.created_at DESC`
     );
     res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/admin/ghar-jagga/inquiries/:id', authenticateAdmin, async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM ghar_jagga_inquiries WHERE id = $1', [id]);
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

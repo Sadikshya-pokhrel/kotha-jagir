@@ -1046,6 +1046,11 @@ function renderApplyFlow(listingId) {
         </div>
 
         <div class="form-group">
+          <label for="ap-permaddress">Permanent Address <span class="required">*</span></label>
+          <input id="ap-permaddress" class="form-control" type="text" placeholder="e.g. Pokhara-8, Kaski" required value="${State.applyFormData.permanentAddress || ''}" oninput="State.applyFormData.permanentAddress=this.value" />
+        </div>
+
+        <div class="form-group">
           <label for="ap-date">Preferred Moving / Start Date</label>
           <input id="ap-date" class="form-control" type="date" min="${new Date().toISOString().split('T')[0]}" value="${State.applyFormData.date || ''}" onchange="State.applyFormData.date=this.value" />
         </div>
@@ -1885,11 +1890,11 @@ function renderAdminInquiries() {
   <div class="glass-table-wrap">
     <table class="glass-table">
       <thead>
-        <tr><th>Timestamp</th><th>Applicant Name</th><th>Phone</th><th>Listing</th><th>Message</th></tr>
+        <tr><th>Timestamp</th><th>Applicant Name</th><th>Phone</th><th>Listing</th><th>Message</th><th>Actions</th></tr>
       </thead>
       <tbody>
         ${items.length === 0 ? `
-          <tr><td colspan="5" style="text-align:center;padding:40px;color:var(--text-muted)">No inquiries submitted yet</td></tr>
+          <tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted)">No inquiries submitted yet</td></tr>
         ` : items.map(inq => `
           <tr>
             <td style="color:var(--text-muted);font-size:0.8rem;white-space:nowrap">${new Date(inq.created_at).toLocaleString()}</td>
@@ -1899,6 +1904,9 @@ function renderAdminInquiries() {
               <a href="#/ghar-jagga/${inq.listing_id}" target="_blank" style="color:inherit;text-decoration:underline;">${inq.listing_title || 'Unknown Listing'}</a>
             </td>
             <td style="font-size:0.85rem;line-height:1.4;max-width:300px;word-wrap:break-word;">${inq.message || '<em style="color:var(--text-muted)">No message</em>'}</td>
+            <td>
+              <button class="btn btn-ghost btn-icon" style="color:var(--danger)" title="Delete Inquiry" onclick="deleteGharJaggaInquiry('${inq.id}')" aria-label="Delete inquiry ${inq.id}">${Icon.trash}</button>
+            </td>
           </tr>
         `).join('')}
       </tbody>
@@ -2089,9 +2097,15 @@ function renderAppModal() {
         </div>
 
         <div class="divider"></div>
-        <div style="margin-bottom:14px">
-          <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);margin-bottom:4px">Listing Applied For</div>
-          <div style="font-weight:600">${app.listingTitle}</div>
+        <div style="margin-bottom:14px; display:grid; grid-template-columns:1fr 1fr; gap:12px">
+          <div>
+            <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);margin-bottom:4px">Listing Applied For</div>
+            <div style="font-weight:600">${app.listingTitle}</div>
+          </div>
+          <div>
+            <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);margin-bottom:4px">Permanent Address</div>
+            <div style="font-weight:600">${app.permanentAddress || 'N/A'}</div>
+          </div>
         </div>
         <div style="margin-bottom:16px">
           <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted);margin-bottom:4px">Applicant Message</div>
@@ -2249,8 +2263,14 @@ window.submitApplyStep1 = function (e) {
   const email = document.getElementById('ap-email').value;
   const occ = document.getElementById('ap-occ').value;
   const idtype = document.getElementById('ap-idtype').value;
+  const permanentAddress = document.getElementById('ap-permaddress').value;
   const date = document.getElementById('ap-date').value;
   const msg = document.getElementById('ap-msg').value;
+
+  if (!permanentAddress) {
+    showToast('Please enter your permanent address.', 'error');
+    return;
+  }
 
   if (idtype === 'passport') {
     if (!State.applyFormData.citFrontFile && !State.applyFormData.citFront) {
@@ -2267,7 +2287,7 @@ window.submitApplyStep1 = function (e) {
 
   State.applyFormData = {
     ...State.applyFormData,
-    name, phone, email, occ, idtype, date, msg
+    name, phone, email, occ, idtype, permanentAddress, date, msg
   };
   State.applyStep = 2;
   render();
@@ -2294,6 +2314,7 @@ window.submitApplyStep2 = async function () {
     form.append('email', State.applyFormData.email);
     form.append('occupation', State.applyFormData.occ);
     form.append('id_type', State.applyFormData.idtype);
+    form.append('permanent_address', State.applyFormData.permanentAddress);
     form.append('preferred_date', State.applyFormData.date || '');
     form.append('message', State.applyFormData.msg);
     form.append('password', pass.value);
@@ -2509,6 +2530,22 @@ window.deleteApplication = async function (id) {
     await API.deleteApplication(id);
     showToast(`Permanently deleted application ${id}`, 'success');
     State.applications = null; // reload list
+    render();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+};
+
+window.deleteGharJaggaInquiry = async function (id) {
+  if (!confirm('Are you sure you want to permanently delete this inquiry request?')) {
+    return;
+  }
+  try {
+    await API.deleteGharJaggaInquiry(id);
+    showToast('Inquiry request deleted successfully', 'success');
+    if (State.inquiries) {
+      State.inquiries = State.inquiries.filter(inq => inq.id.toString() !== id.toString());
+    }
     render();
   } catch (err) {
     showToast(err.message, 'error');

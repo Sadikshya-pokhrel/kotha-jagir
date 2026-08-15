@@ -90,6 +90,7 @@ CREATE TABLE IF NOT EXISTS applications (
     citizenship_back_url TEXT,
     preferred_date DATE,
     message TEXT,
+    permanent_address TEXT,
     password_hash TEXT, -- Set at application time, set to NULL when status = 'visitor_reverted'
     status TEXT NOT NULL DEFAULT 'pending_payment' CHECK (status IN ('pending_payment', 'applicant', 'member', 'visitor_reverted')),
     payment_confirmed_at TIMESTAMPTZ,
