@@ -828,14 +828,12 @@ async function videoToHls(videoBuffer, originalName) {
 
   await new Promise((resolve, reject) => {
     const outputOptions = [
-      // Video streams: 2 renditions (360p & 720p)
-      '-map 0:v:0', '-map 0:v:0',
-      // Scale filters per rendition
-      '-filter:v:0', 'scale=-2:360',
-      '-filter:v:1', 'scale=-2:720',
-      // Bitrates
-      '-b:v:0', '400k', '-maxrate:v:0', '500k', '-bufsize:v:0', '800k',
-      '-b:v:1', '1500k', '-maxrate:v:1', '2000k', '-bufsize:v:1', '3000k',
+      // Map single video stream
+      '-map', '0:v:0',
+      // Scale filter to 720p (high quality desktop & mobile)
+      '-filter:v:0', 'scale=-2:720',
+      // Bitrate (720p optimized)
+      '-b:v:0', '1500k', '-maxrate:v:0', '2000k', '-bufsize:v:0', '3000k',
       // Codec & Speed Optimization (preset superfast, crf 24)
       '-c:v', 'libx264', '-crf', '24', '-preset', 'superfast',
       // HLS settings
@@ -850,13 +848,8 @@ async function videoToHls(videoBuffer, originalName) {
 
     if (hasAudio) {
       outputOptions.push(
-        '-map 0:a:0?', '-map 0:a:0?',
-        '-c:a', 'aac', '-b:a', '128k', '-ar', '48000',
-        '-var_stream_map', 'v:0,a:0 v:1,a:1'
-      );
-    } else {
-      outputOptions.push(
-        '-var_stream_map', 'v:0 v:1'
+        '-map', '0:a:0?',
+        '-c:a', 'aac', '-b:a', '128k', '-ar', '48000'
       );
     }
 

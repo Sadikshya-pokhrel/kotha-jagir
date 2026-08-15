@@ -48,6 +48,58 @@ async function apiFetch(endpoint, options = {}) {
   return await response.json().catch(() => ({}));
 }
 
+// Helper for XHR-based file uploads with progress tracking
+function apiUpload(endpoint, formData, onProgress, method = 'POST') {
+  return new Promise((resolve, reject) => {
+    const url = endpoint.startsWith('http') ? endpoint : `${API_BASE}${endpoint}`;
+    const xhr = new XMLHttpRequest();
+    
+    xhr.open(method, url, true);
+    xhr.withCredentials = true; // send and store cookies
+
+    if (onProgress) {
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const percentComplete = Math.round((event.loaded / event.total) * 100);
+          onProgress(percentComplete);
+        }
+      };
+    }
+
+    xhr.onload = () => {
+      if (xhr.status === 401) {
+        const hash = window.location.hash;
+        if (hash.startsWith('#/admin') && hash !== '#/admin/login') {
+          window.location.hash = '#/admin/login';
+        } else if (hash.startsWith('#/dashboard')) {
+          window.location.hash = '#/login';
+        }
+      }
+
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          resolve(JSON.parse(xhr.responseText));
+        } catch (e) {
+          resolve({});
+        }
+      } else {
+        let errorMsg = `HTTP error! Status: ${xhr.status}`;
+        try {
+          const res = JSON.parse(xhr.responseText);
+          errorMsg = res.error || errorMsg;
+        } catch (e) {}
+        reject(new Error(errorMsg));
+      }
+    };
+
+    xhr.onerror = () => {
+      reject(new Error('Network error during file upload.'));
+    };
+
+    xhr.send(formData);
+  });
+}
+
 window.API = {
   // --- METADATA SEEDS ---
   async getLocalities() {
@@ -86,8 +138,11 @@ window.API = {
   },
 
   // --- APPLICATION FLOW ---
-  async submitApplication(formData) {
+  async submitApplication(formData, onProgress) {
     // formData must be an instance of FormData for multipart file upload
+    if (onProgress) {
+      return await apiUpload('/api/applications', formData, onProgress, 'POST');
+    }
     return await apiFetch('/api/applications', {
       method: 'POST',
       body: formData,
@@ -184,15 +239,21 @@ window.API = {
   async getAdminListings(type = 'room') {
     return await apiFetch(`/api/admin/listings?type=${type}`);
   },
-  async createListing(formData) {
+  async createListing(formData, onProgress) {
     // formData must be FormData
+    if (onProgress) {
+      return await apiUpload('/api/admin/listings', formData, onProgress, 'POST');
+    }
     return await apiFetch('/api/admin/listings', {
       method: 'POST',
       body: formData,
     });
   },
-  async updateListing(id, formData) {
+  async updateListing(id, formData, onProgress) {
     // formData must be FormData
+    if (onProgress) {
+      return await apiUpload(`/api/admin/listings/${id}`, formData, onProgress, 'PUT');
+    }
     return await apiFetch(`/api/admin/listings/${id}`, {
       method: 'PUT',
       body: formData,

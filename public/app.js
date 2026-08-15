@@ -1131,6 +1131,17 @@ function renderApplyFlow(listingId) {
             </div>
           </div>
         </div>
+        
+        <!-- Upload Progress Bar -->
+        <div class="form-group" id="apply-progress-container" style="display:none; margin-top: 15px; background: rgba(0,0,0,0.02); padding: 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.05);">
+          <div style="display:flex; justify-content:space-between; margin-bottom: 6px; font-size: 0.82rem;">
+            <span style="font-weight:600; color:var(--text-body);" id="apply-progress-label">Uploading application documents...</span>
+            <span style="font-weight:700; color:var(--primary);" id="apply-progress-percent">0%</span>
+          </div>
+          <div style="width:100%; height:6px; background:rgba(0,0,0,0.06); border-radius:3px; overflow:hidden;">
+            <div id="apply-progress-bar" style="width:0%; height:100%; background:var(--primary); transition: width 0.1s ease; border-radius:3px;"></div>
+          </div>
+        </div>
 
         <div class="modal-footer">
           <button type="button" class="btn btn-ghost" onclick="State.applyStep=1;render();">Back</button>
@@ -2027,6 +2038,17 @@ function renderCreateModal() {
             </div>
           </div>
         ` : ''}
+        
+        <!-- Upload Progress Bar -->
+        <div class="form-group" id="upload-progress-container" style="display:none; margin-top: 15px; background: rgba(0,0,0,0.02); padding: 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.05);">
+          <div style="display:flex; justify-content:space-between; margin-bottom: 6px; font-size: 0.82rem;">
+            <span style="font-weight:600; color:var(--text-body);" id="upload-progress-label">Uploading assets...</span>
+            <span style="font-weight:700; color:var(--primary);" id="upload-progress-percent">0%</span>
+          </div>
+          <div style="width:100%; height:6px; background:rgba(0,0,0,0.06); border-radius:3px; overflow:hidden;">
+            <div id="upload-progress-bar" style="width:0%; height:100%; background:var(--primary); transition: width 0.1s ease; border-radius:3px;"></div>
+          </div>
+        </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-ghost" onclick="State.showCreateModal=false;render()">Cancel</button>
@@ -2303,10 +2325,24 @@ window.submitApplyStep2 = async function () {
     return;
   }
 
+  const progressContainer = document.getElementById('apply-progress-container');
+  const progressLabel = document.getElementById('apply-progress-label');
+  const progressPercent = document.getElementById('apply-progress-percent');
+  const progressBar = document.getElementById('apply-progress-bar');
+  const backBtn = document.querySelector('button[onclick="State.applyStep=1;render();"]');
+
+  if (progressContainer) {
+    progressContainer.style.display = 'block';
+    if (progressPercent) progressPercent.innerText = '0%';
+    if (progressBar) progressBar.style.width = '0%';
+    if (progressLabel) progressLabel.innerText = 'Uploading application documents...';
+  }
+  if (backBtn) backBtn.disabled = true;
+
   const btn = document.querySelector('button[onclick="submitApplyStep2()"]');
   if (btn) {
     btn.disabled = true;
-    btn.innerText = 'Submitting Application...';
+    btn.innerText = 'Uploading documents...';
   }
 
   try {
@@ -2329,13 +2365,22 @@ window.submitApplyStep2 = async function () {
       form.append('citizenship_back', State.applyFormData.citBackFile);
     }
 
-    const res = await API.submitApplication(form);
+    const res = await API.submitApplication(form, (percent) => {
+      if (progressPercent) progressPercent.innerText = percent + '%';
+      if (progressBar) progressBar.style.width = percent + '%';
+      if (percent >= 100 && progressLabel) {
+        progressLabel.innerText = 'Processing document uploads...';
+        if (btn) btn.innerText = 'Processing...';
+      }
+    });
     State.applyGeneratedId = res.id;
     State.applyStep = 3;
     render();
 
   } catch (err) {
     showToast(`Submission failed: ${err.message}`, 'error');
+    if (progressContainer) progressContainer.style.display = 'none';
+    if (backBtn) backBtn.disabled = false;
     if (btn) {
       btn.disabled = false;
       btn.innerText = 'Submit & Confirm on WhatsApp';
@@ -2760,6 +2805,20 @@ window.publishListing = async function () {
   const checkboxes = document.querySelectorAll('input[name="lc-amenity"]:checked');
   const checkedAmenities = Array.from(checkboxes).map(cb => cb.value);
 
+  const progressContainer = document.getElementById('upload-progress-container');
+  const progressLabel = document.getElementById('upload-progress-label');
+  const progressPercent = document.getElementById('upload-progress-percent');
+  const progressBar = document.getElementById('upload-progress-bar');
+  const cancelBtn = document.querySelector('button[onclick="State.showCreateModal=false;render()"]');
+
+  if (progressContainer) {
+    progressContainer.style.display = 'block';
+    if (progressPercent) progressPercent.innerText = '0%';
+    if (progressBar) progressBar.style.width = '0%';
+    if (progressLabel) progressLabel.innerText = 'Uploading assets...';
+  }
+  if (cancelBtn) cancelBtn.disabled = true;
+
   const btn = document.querySelector('button[onclick="publishListing()"]');
   if (btn) {
     btn.disabled = true;
@@ -2811,13 +2870,23 @@ window.publishListing = async function () {
       form.append('video', videoFile);
     }
 
-    await API.createListing(form);
+    await API.createListing(form, (percent) => {
+      if (progressPercent) progressPercent.innerText = percent + '%';
+      if (progressBar) progressBar.style.width = percent + '%';
+      if (percent >= 100 && progressLabel) {
+        progressLabel.innerText = 'Processing assets & transcoding video...';
+        if (btn) btn.innerText = 'Processing...';
+      }
+    });
+
     showToast('Listing successfully created!');
     State.showCreateModal = false;
     State.listings = null; // invalidate
     render();
   } catch (err) {
     showToast(`Listing creation failed: ${err.message}`, 'error');
+    if (progressContainer) progressContainer.style.display = 'none';
+    if (cancelBtn) cancelBtn.disabled = false;
     if (btn) {
       btn.disabled = false;
       btn.innerText = 'Publish Listing';
