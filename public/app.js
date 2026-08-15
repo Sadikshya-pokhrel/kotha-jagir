@@ -1105,9 +1105,12 @@ function renderApplyFlow(listingId) {
         </p>
 
         <div class="payment-wizard-grid">
-          <div class="payment-qr-container">
+          <div class="payment-qr-container" style="display:flex; flex-direction:column; align-items:center; gap:8px;">
             <img src="${State.adminQrCode || 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=400&q=80'}" alt="Payment QR Code" />
             <div class="payment-qr-label">eSewa / Khalti scan QR</div>
+            <a href="${State.adminQrCode || 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=400&q=80'}" download="kotha_jagir_payment_qr.png" target="_blank" class="btn btn-outline btn-sm" style="display:inline-flex; align-items:center; gap:6px; font-size:0.8rem; padding:8px 14px; text-decoration:none; margin-top:4px;">
+              ${Icon.download} Download QR Code
+            </a>
           </div>
           <div class="payment-details-container">
             <h4 style="margin-bottom:8px">Payment details</h4>
