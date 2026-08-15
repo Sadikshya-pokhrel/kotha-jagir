@@ -1,5 +1,6 @@
 const { S3Client, PutObjectCommand, ListObjectsV2Command, GetObjectCommand, DeleteObjectCommand, DeleteObjectsCommand } = require('@aws-sdk/client-s3');
 const sharp = require('sharp');
+sharp.cache(false); // Release memory cache immediately to prevent OOM on concurrent uploads
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '.env') });

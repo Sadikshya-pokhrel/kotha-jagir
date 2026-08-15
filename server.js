@@ -2,6 +2,7 @@ const path = require('path');
 const os = require('os');
 const fs = require('fs');
 const fsp = require('fs').promises;
+const { exec } = require('child_process');
 require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 
 function fetchImageBuffer(url) {
@@ -800,9 +801,19 @@ const upload = multer({
 
 // =============================================================================
 // HLS VIDEO TRANSCODE PIPELINE
-// Takes a raw video buffer, transcodes to 3 HLS renditions (360p/480p/720p),
+// Takes a raw video buffer, transcodes to 2 HLS renditions (360p/720p),
 // uploads all .m3u8 and .ts segments to R2, returns the master playlist URL.
 // =============================================================================
+function hasAudioStream(filePath) {
+  return new Promise((resolve) => {
+    exec(`"${ffmpegPath}" -i "${filePath}"`, (err, stdout, stderr) => {
+      const output = stderr || stdout || '';
+      const hasAudio = output.includes('Audio:');
+      resolve(hasAudio);
+    });
+  });
+}
+
 async function videoToHls(videoBuffer, originalName) {
   const jobId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const tmpDir = path.join(os.tmpdir(), `hls_${jobId}`);
@@ -812,36 +823,45 @@ async function videoToHls(videoBuffer, originalName) {
   await fsp.mkdir(tmpDir, { recursive: true });
   await fsp.writeFile(inputPath, videoBuffer);
 
-  console.log(`[HLS] Starting transcode job ${jobId} for ${originalName}`);
+  const hasAudio = await hasAudioStream(inputPath);
+  console.log(`[HLS] Starting transcode job ${jobId} for ${originalName} (Audio: ${hasAudio})`);
 
   await new Promise((resolve, reject) => {
-    ffmpeg(inputPath)
-      .outputOptions([
-        // Video streams: 3 renditions
-        '-map 0:v:0', '-map 0:v:0', '-map 0:v:0',
-        // Scale filters per rendition
-        '-filter:v:0', 'scale=-2:360',
-        '-filter:v:1', 'scale=-2:480',
-        '-filter:v:2', 'scale=-2:720',
-        // Bitrates
-        '-b:v:0', '400k', '-maxrate:v:0', '500k', '-bufsize:v:0', '800k',
-        '-b:v:1', '800k', '-maxrate:v:1', '1000k', '-bufsize:v:1', '1600k',
-        '-b:v:2', '1500k', '-maxrate:v:2', '2000k', '-bufsize:v:2', '3000k',
-        // Codec
-        '-c:v', 'libx264', '-crf', '23', '-preset', 'fast',
-        // Audio: copy to all streams
-        '-map 0:a:0?', '-map 0:a:0?', '-map 0:a:0?',
+    const outputOptions = [
+      // Video streams: 2 renditions (360p & 720p)
+      '-map 0:v:0', '-map 0:v:0',
+      // Scale filters per rendition
+      '-filter:v:0', 'scale=-2:360',
+      '-filter:v:1', 'scale=-2:720',
+      // Bitrates
+      '-b:v:0', '400k', '-maxrate:v:0', '500k', '-bufsize:v:0', '800k',
+      '-b:v:1', '1500k', '-maxrate:v:1', '2000k', '-bufsize:v:1', '3000k',
+      // Codec & Speed Optimization (preset superfast, crf 24)
+      '-c:v', 'libx264', '-crf', '24', '-preset', 'superfast',
+      // HLS settings
+      '-f', 'hls',
+      '-hls_time', '6',
+      '-hls_playlist_type', 'vod',
+      '-hls_segment_type', 'mpegts',
+      '-hls_flags', 'independent_segments',
+      '-master_pl_name', 'master.m3u8',
+      '-hls_segment_filename', path.join(tmpDir, 'stream_%v/seg%03d.ts'),
+    ];
+
+    if (hasAudio) {
+      outputOptions.push(
+        '-map 0:a:0?', '-map 0:a:0?',
         '-c:a', 'aac', '-b:a', '128k', '-ar', '48000',
-        // HLS settings
-        '-f', 'hls',
-        '-hls_time', '6',
-        '-hls_playlist_type', 'vod',
-        '-hls_segment_type', 'mpegts',
-        '-hls_flags', 'independent_segments',
-        '-master_pl_name', 'master.m3u8',
-        '-var_stream_map', 'v:0,a:0 v:1,a:1 v:2,a:2',
-        '-hls_segment_filename', path.join(tmpDir, 'stream_%v/seg%03d.ts'),
-      ])
+        '-var_stream_map', 'v:0,a:0 v:1,a:1'
+      );
+    } else {
+      outputOptions.push(
+        '-var_stream_map', 'v:0 v:1'
+      );
+    }
+
+    ffmpeg(inputPath)
+      .outputOptions(outputOptions)
       .output(path.join(tmpDir, 'stream_%v/stream.m3u8'))
       .on('start', cmd => console.log(`[HLS] ffmpeg command: ${cmd.slice(0, 120)}...`))
       .on('stderr', line => { if (line.includes('frame=') || line.includes('Error')) console.log(`[HLS] ${line}`); })
