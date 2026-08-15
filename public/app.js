@@ -437,17 +437,31 @@ function renderListingCard(item) {
   else if (isJob) bookedRoute = `#/jobs/${item.id}/filled`;
   else if (isGharJagga) bookedRoute = `#/ghar-jagga/${item.id}/booked`;
 
+  const hasImage = item.images && item.images.length > 0 && item.images[0];
+
   return `
-  <div class="listing-card" tabindex="${item.booked ? '-1' : '0'}" 
+  <div class="listing-card ${hasImage ? '' : 'text-only-card'}" tabindex="${item.booked ? '-1' : '0'}" 
     ${item.booked ? '' : `onclick="navigate('${detailRoute}')" onkeydown="if(event.key==='Enter')navigate('${detailRoute}')"`}
     role="${item.booked ? 'presentation' : 'article'}"
     aria-label="${item.title}">
-    <div class="card-img-wrap">
-      <img src="${item.images[0] || 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&q=80'}" alt="${item.title}" loading="lazy" />
-      <div class="card-locality-chip">${Icon.map} ${item.locality}</div>
-      <div class="card-type-chip">${isRoom ? (item.roomType || 'Room') : item.category}</div>
-    </div>
-    <div class="card-body">
+    ${hasImage ? `
+      <div class="card-img-wrap">
+        <img src="${item.images[0]}" alt="${item.title}" loading="lazy" />
+        <div class="card-locality-chip">${Icon.map} ${item.locality}</div>
+        <div class="card-type-chip">${isRoom ? (item.roomType || 'Room') : item.category}</div>
+      </div>
+    ` : ''}
+    <div class="card-body" ${hasImage ? '' : 'style="padding-top:20px"'}>
+      ${hasImage ? '' : `
+        <div style="display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap;">
+          <span class="badge" style="background:rgba(0,0,0,0.04); color:var(--text-body); font-size:0.75rem; display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:6px;">
+            ${Icon.map} ${item.locality}
+          </span>
+          <span class="badge badge-gold" style="font-size:0.75rem; display:inline-flex; padding:3px 8px; border-radius:6px;">
+            ${isRoom ? (item.roomType || 'Room') : item.category}
+          </span>
+        </div>
+      `}
       <div class="card-title">${item.title}</div>
       <div class="card-price">
         ${isGharJagga ? `<span style="font-size:0.85rem;color:var(--primary);font-weight:600;">Contact for further information</span>` : `
@@ -1682,7 +1696,13 @@ function renderAdminListings() {
           <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted)">No active listings created</td></tr>
         ` : items.map(item => `
           <tr>
-            <td><img src="${item.images[0] || 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&q=80'}" alt="${item.title}" style="width:56px;height:40px;border-radius:7px;object-fit:cover" /></td>
+            <td>
+              ${(item.images && item.images.length > 0 && item.images[0]) ? `
+                <img src="${item.images[0]}" alt="${item.title}" style="width:56px;height:40px;border-radius:7px;object-fit:cover" />
+              ` : `
+                <div style="width:56px;height:40px;border-radius:7px;background:rgba(0,0,0,0.04);display:flex;align-items:center;justify-content:center;font-size:0.65rem;color:var(--text-muted);font-weight:600;text-align:center;border:1px dashed rgba(0,0,0,0.1)">No Media</div>
+              `}
+            </td>
             <td style="font-weight:600;max-width:180px">${item.title}</td>
             <td>${item.locality}</td>
             <td>${isRoom ? (item.roomType || 'Room') : item.category}</td>
