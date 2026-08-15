@@ -1173,7 +1173,7 @@ Please verify my payment.`;
           <ol style="margin: 0; padding-left: 20px; font-size: 0.9rem; line-height: 1.6; color: var(--text-body);">
             <li style="margin-bottom: 8px;">Complete the required verification payment of <strong>Rs. 500</strong>.</li>
             <li style="margin-bottom: 8px;">Take a clear screenshot of your payment confirmation.</li>
-            <li style="margin-bottom: 8px;">Click <strong>"Send Payment Screenshot on WhatsApp"</strong> below to open WhatsApp.</li>
+            <li style="margin-bottom: 8px;">Click <strong>"WhatsApp"</strong> below to open WhatsApp.</li>
             <li style="margin-bottom: 8px;"><strong style="color: var(--danger);">Please attach your payment screenshot manually</strong> in WhatsApp before sending the message.</li>
             <li>Send the pre-filled message to the Kotha Jagir admin.</li>
           </ol>
@@ -1182,7 +1182,7 @@ Please verify my payment.`;
         <div style="display: flex; flex-direction: column; gap: 12px; align-items: center;">
           <a href="${waUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-success" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 14px 20px; font-size: 1rem; font-weight: 600;">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm5.835-3.279c1.614.957 3.513 1.463 5.461 1.465 5.75.003 10.429-4.675 10.432-10.43.001-2.788-1.084-5.409-3.056-7.382C16.758 2.395 14.138 1.3 11.348 1.3c-5.748 0-10.428 4.677-10.43 10.432-.001 1.86.486 3.68 1.41 5.295L1.31 22.7l5.63-1.478.021-.001zM17.65 19.3c-.3-.15-1.785-.88-2.065-.98-.28-.1-.49-.15-.69.15-.2.3-.77.98-.95 1.18-.18.2-.35.23-.65.08-1.02-.51-1.785-1.01-2.485-1.63-.52-.46-.85-1.01-1.22-.21-.37-.02-.57.17-.72.17-.13.37-.43.56-.65.2-.22.26-.37.4-.63.14-.27.07-.49-.03-.7-.1-.2-.89-2.14-1.22-2.94-.32-.78-.65-.68-.89-.69-.23-.01-.49-.01-.75-.01-.26 0-.69.1-1.05.49-.36.39-1.39 1.36-1.39 3.32c0 1.96 1.43 3.85 1.63 4.12.2.27 2.8 4.28 6.79 6c.95.41 1.69.66 2.27.85.96.3 1.84.26 2.53.16.77-.11 2.38-.97 2.72-1.92.34-.95.34-1.76.24-1.93-.11-.17-.4-.27-.7-.42z"/></svg>
-            Send Payment Screenshot on WhatsApp
+            WhatsApp
           </a>
           <button class="btn btn-outline" style="width: 100%; padding: 12px; font-size: 0.95rem;" onclick="navigate('#/')">
             Back to Home
